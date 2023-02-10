@@ -22,7 +22,7 @@ class Main3 extends AbstractEngine {
 		model.balls.push(new Ball(graphics));
 		model.gravity[vertical] = 100;
 		model.platform = new Platform(100);
-		model.platform.y = model.bounds.size[vertical] * 0.66;
+		model.platform.y = model.bounds.size[vertical] * model.platformPosition;
 		model.platform.x = model.bounds.size[horizontal] * 0.5;
 		addChild(model.platform);
 		systems.push(new Ballistics(model));
@@ -30,6 +30,7 @@ class Main3 extends AbstractEngine {
 		systems.push(new BallRenderer(model));
 		systems.push(new PlatformMotor(model));
 		systems.push(new PlatformDetector(model));
+		systems.push(new PlatformElastics(model));
 	}
 
 	override function update(t:Float) {
@@ -48,10 +49,16 @@ interface IBall extends PointParticle {
 	public var r(default, null):Float;
 }
 
+enum BallState {
+	Ballistic;
+	Bounce(t:Float);
+}
+
 class Ball implements IBall {
-	public var pos(default, null):AVector2D<Float> = AVConstructor.create(100, 100);
+	public var pos(default, null):AVector2D<Float> = AVConstructor.create(300, 400);
 	public var spd(default, null):AVector2D<Float> = AVConstructor.create(0, 0);
 	public var r:Float = 20;
+	public var state:BallState = Ballistic;
 	public var graphics:Graphics;
 	public var color:Int = 0x903020;
 
@@ -69,6 +76,7 @@ class Model {
 	public var platform:Platform;
 	public var gravity:AVector2D<Float> = AVConstructor.create(0, 0);
 	public var input:Input;
+	public var platformPosition = 0.66;
 
 	public function new() {
 		var keys = new KeyPoll(openfl.Lib.current.stage);
@@ -125,15 +133,38 @@ class Ballistics extends System {
 	}
 }
 
+class PlatformElastics extends System {
+	var k = 300.;
+	var c = 50.;
+	var mass = 5;
+	var tick = 0;
+
+	override function update(dt:Float) {
+		tick++;
+		var zero = model.bounds.size[vertical] * model.platformPosition;
+		var p = model.platform;
+		var elForce = -k * (p.y - zero);
+		var frForce = -p.speed[vertical] * c;
+		var force = elForce + frForce;
+		var acc = force / mass;
+		// if (tick % 50 == 0)
+		// 	trace('elf: $elForce, fr: $frForce, total: $force, acc: $acc, spd:${p.speed[vertical]}');
+		p.speed[vertical] += acc * dt;
+		p.y += p.speed[vertical] * dt;
+	}
+}
+
 class PlatformDetector extends System {
 	override function update(dt:Float) {
-		var left:Float = -model.platform.w/2;
-		var right:Float = model.platform.w/2;
+		var left:Float = -model.platform.w / 2;
+		var right:Float = model.platform.w / 2;
 		for (ball in model.balls) {
 			var localY = ball.pos[vertical] - model.platform.y;
 			var localX = ball.pos[horizontal] - model.platform.x;
 			var r = ball.r;
 			if (localY + r < 0)
+				continue;
+			if (localY - r > model.platform.h)
 				continue;
 			var x = localX;
 			if (x + r < left || x - r > right)
@@ -145,7 +176,9 @@ class PlatformDetector extends System {
 
 	function straightBounce(ball:IBall) {
 		ball.spd[vertical] *= -1;
-        ball.pos[vertical] = model.platform.y - ball.r - 1;
+		ball.pos[vertical] = model.platform.y - ball.r - 1;
+		model.platform.y += 20;
+		model.platform.speed[vertical] += 20;
 	}
 }
 
@@ -173,8 +206,9 @@ class PlatformMotor extends System {
 
 class Platform extends Sprite {
 	public var w:Float;
+	public var speed:AVector2D<Float> = AVConstructor.create(0, 0);
 
-	var h = 10;
+	public var h = 10;
 
 	public function new(w) {
 		super();
