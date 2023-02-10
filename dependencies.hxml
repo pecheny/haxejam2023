@@ -1,0 +1,3 @@
+-lib lime:7.9.0
+-lib taxis:git:https://github.com/pecheny/taxis
+-lib hxmath
