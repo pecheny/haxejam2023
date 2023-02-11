@@ -1,5 +1,6 @@
 package j2023;
 
+import utils.KeyBinder;
 import openfl.text.TextFormat;
 import openfl.text.TextFormatAlign;
 import openfl.text.TextFieldType;
@@ -27,10 +28,7 @@ class Main3 extends AbstractEngine {
 		var canvas = new Sprite();
 		addChild(canvas);
 		model.balls.push(new Ball(canvas.graphics));
-		model.gravity[vertical] = 100;
-		model.platform = new Platform(100);
-		model.platform.y = model.bounds.size[vertical] * model.platformPosition;
-		model.platform.x = model.bounds.size[horizontal] * 0.5;
+        model.reset();
 		addChild(model.platform);
 		systems.push(new Ballistics(model));
 		systems.push(new GameBounds(model));
@@ -48,14 +46,13 @@ class Main3 extends AbstractEngine {
 	}
 
 	function createLabel() {
-		var t = new TextField();
+		var t = model.t;
 		model.t = t;
 		var tf = new TextFormat("Calibri", 186, 0x517bcf, true, false, false, null, null, TextFormatAlign.CENTER);
 		t.type = TextFieldType.DYNAMIC;
-        t.height = 300;
+		t.height = 300;
 		t.defaultTextFormat = tf;
 		t.width = stage.stageWidth;
-		t.text = "00";
 		t.y = stage.stageHeight * .33;
 		addChild(t);
 	}
@@ -76,7 +73,7 @@ enum BallState {
 }
 
 class Ball implements IBall {
-	public var pos(default, null):AVector2D<Float> = AVConstructor.create(300, 400);
+	public var pos(default, null):AVector2D<Float> = AVConstructor.create(0, 0);
 	public var spd(default, null):AVector2D<Float> = AVConstructor.create(0, 0);
 	public var r:Float = 20;
 	public var state:BallState = Ballistic;
@@ -98,7 +95,7 @@ class Model {
 	public var platform:Platform;
 	public var gravity:AVector2D<Float> = AVConstructor.create(0, 0);
 	public var input:Input;
-	public var platformPosition = 0.66;
+	public var platformPosition:Float;
 	public var transitionDuration:Float = 0.2;
 	public var t:TextField;
 	public var floor = AVConstructor.create(Axis2D, 0, 0);
@@ -111,6 +108,28 @@ class Model {
 			up: Keyboard.UP,
 			down: Keyboard.DOWN,
 		}, keys, [GameButtons.jump => Keyboard.SPACE]);
+        var keys = new KeyBinder();
+        keys.addCommand(Keyboard.R, reset);
+        t = new TextField();
+		gravity[vertical] = 100;
+		platform = new Platform(100);
+		platformPosition = 0.66;
+	}
+
+	public function reset() {
+		for (ball in balls) {
+			ball.pos[horizontal] = 300;
+			ball.pos[vertical] = 400;
+			ball.spd[horizontal] = Math.random() * 20 - 10;
+			ball.spd[vertical] = -20;
+		}
+        floor[horizontal] = 0;
+        floor[vertical] = 0;
+		platform.y = bounds.size[vertical] * platformPosition;
+		platform.x = bounds.size[horizontal] * 0.5;
+        platform.speed[horizontal] = 0;
+        platform.speed[vertical] = 0;
+		t.text = "0";
 	}
 }
 
@@ -230,10 +249,10 @@ class PlatformDetector extends System {
 			ball.state = Ballistic;
 			ball.transitionTime = 0;
 			return;
-		} else if (model.platform.speed[vertical]>ball.spd[vertical]){
+		} else if (model.platform.speed[vertical] > ball.spd[vertical]) {
 			ball.state = Ballistic;
 			ball.transitionTime = 0;
-        }
+		}
 		ball.pos[vertical] = model.platform.y - ball.r;
 		ball.pos[horizontal] = model.platform.x + localX;
 	}
