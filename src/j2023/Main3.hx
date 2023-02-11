@@ -51,7 +51,7 @@ interface IBall extends PointParticle {
 
 enum BallState {
 	Ballistic;
-	Bounce(t:Float);
+	Bounce;
 }
 
 class Ball implements IBall {
@@ -61,6 +61,7 @@ class Ball implements IBall {
 	public var state:BallState = Ballistic;
 	public var graphics:Graphics;
 	public var color:Int = 0x903020;
+	public var transitionTime:Float = 0;
 
 	public function new(gr) {
 		this.graphics = gr;
@@ -77,6 +78,7 @@ class Model {
 	public var gravity:AVector2D<Float> = AVConstructor.create(0, 0);
 	public var input:Input;
 	public var platformPosition = 0.66;
+	public var transitionDuration:Float = 0.5;
 
 	public function new() {
 		var keys = new KeyPoll(openfl.Lib.current.stage);
@@ -156,29 +158,52 @@ class PlatformElastics extends System {
 
 class PlatformDetector extends System {
 	override function update(dt:Float) {
-		var left:Float = -model.platform.w / 2;
-		var right:Float = model.platform.w / 2;
 		for (ball in model.balls) {
-			var localY = ball.pos[vertical] - model.platform.y;
-			var localX = ball.pos[horizontal] - model.platform.x;
-			var r = ball.r;
-			if (localY + r < 0)
-				continue;
-			if (localY - r > model.platform.h)
-				continue;
-			var x = localX;
-			if (x + r < left || x - r > right)
-				continue;
-			if (x > left && x < right)
-				straightBounce(ball);
+			switch ball.state {
+				case Ballistic:
+					handleBallistic(ball, dt);
+				case Bounce:
+					handleBounce(ball, dt);
+			}
 		}
 	}
 
-	function straightBounce(ball:IBall) {
-		ball.spd[vertical] *= -1;
-		ball.pos[vertical] = model.platform.y - ball.r - 1;
-		model.platform.y += 20;
-		model.platform.speed[vertical] += 20;
+	function handleBounce(ball:Ball, dt) {
+		ball.transitionTime += dt;
+		if (ball.transitionTime >= model.transitionDuration) {
+            ball.transitionTime = 0;
+            ball.spd[vertical] = -1 *ball.spd[vertical] + model.platform.speed[vertical];
+            ball.pos[vertical] = model.platform.y - ball.r -1;
+            ball.state = Ballistic;
+            return;
+        }
+        ball.pos[vertical] = model.platform.y - ball.r;
+	}
+
+	function handleBallistic(ball:Ball, dt:Float) {
+		var left:Float = -model.platform.w / 2;
+		var right:Float = model.platform.w / 2;
+		var localY = ball.pos[vertical] - model.platform.y;
+		var localX = ball.pos[horizontal] - model.platform.x;
+		var r = ball.r;
+		if (localY + r < 0)
+			return;
+		if (localY - r > model.platform.h)
+			return;
+		var x = localX;
+		if (x + r < left || x - r > right)
+			return;
+		if (x > left && x < right)
+			straightBounce(ball);
+	}
+
+	function straightBounce(ball:Ball) {
+		// ball.spd[vertical] *= -1;
+		// ball.pos[vertical] = model.platform.y - ball.r - 1;
+		// model.platform.y += 20;
+		model.platform.speed[vertical] += ball.spd[vertical];
+        ball.transitionTime = 0;
+        ball.state = Bounce;
 	}
 }
 
