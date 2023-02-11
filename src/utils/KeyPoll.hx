@@ -55,7 +55,7 @@ class KeyPoll
 	 */
 	public function new(displayObj:DisplayObject)
 	{
-		states = Bytes.alloc(8);
+		states = Bytes.alloc(64);
 		dispObj = displayObj;
 
 		dispObj.addEventListener(KeyboardEvent.KEY_DOWN, keyDownListener);
