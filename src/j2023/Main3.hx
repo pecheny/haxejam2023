@@ -68,7 +68,7 @@ interface IBall extends PointParticle {
 
 enum BallState {
 	Ballistic;
-	Bounce;
+	Bounce(onPlatformX:Float, platformPos:Float);
 }
 
 class Ball implements IBall {
@@ -190,22 +190,26 @@ class PlatformDetector extends System {
 			switch ball.state {
 				case Ballistic:
 					handleBallistic(ball, dt);
-				case Bounce:
-					handleBounce(ball, dt);
+				case Bounce(localx, platformInitial):
+					handleBounce(ball, dt, localx, platformInitial);
 			}
 		}
 	}
 
-	function handleBounce(ball:Ball, dt) {
+	function handleBounce(ball:Ball, dt, localX, platformInitial:Float) {
 		ball.transitionTime += dt;
 		if (ball.transitionTime >= model.transitionDuration) {
 			ball.transitionTime = 0;
 			ball.spd[vertical] = -1 * ball.spd[vertical] + model.platform.speed[vertical];
 			ball.pos[vertical] = model.platform.y - ball.r - 1;
+            var platformIntegralSpeed = ( model.platform.x - platformInitial ) / model.transitionDuration;
+            ball.spd[horizontal] += platformIntegralSpeed;
 			ball.state = Ballistic;
 			return;
 		}
 		ball.pos[vertical] = model.platform.y - ball.r;
+		ball.pos[horizontal] = model.platform.x + localX;
+
 	}
 
 	function handleBallistic(ball:Ball, dt:Float) {
@@ -231,7 +235,7 @@ class PlatformDetector extends System {
 		// model.platform.y += 20;
 		model.platform.speed[vertical] += ball.spd[vertical];
 		ball.transitionTime = 0;
-		ball.state = Bounce;
+		ball.state = Bounce(ball.pos[horizontal] - model.platform.x, model.platform.x);
 	}
 }
 
@@ -244,7 +248,7 @@ class BallRenderer extends System {
 			switch b.state {
 				case Ballistic:
 					g.drawCircle(b.pos[Axis2D.horizontal], b.pos[Axis2D.vertical], b.r);
-				case Bounce:
+				case Bounce(_):
 					var t = b.transitionTime / model.transitionDuration;
                     var easyt = 1 - (t-0.5)*(t-0.5) * 4;
 					var r = b.r;
