@@ -7,7 +7,7 @@
     <app main="j2023.Main3" path="${builds_folder}/Export" file="j2023"/>
 
     <window antialiasing="4"/>
-    <window background="#f0f0f0" fps="60" width="640" height="960"/>
+    <window background="#204080" fps="60" width="640" height="960"/>
     <!--    <window background="#303030" fps="60"  if="html5"/>-->
     <source path="src"/>
 

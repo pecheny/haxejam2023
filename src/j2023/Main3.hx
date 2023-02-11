@@ -1,5 +1,9 @@
 package j2023;
 
+import openfl.text.TextFormat;
+import openfl.text.TextFormatAlign;
+import openfl.text.TextFieldType;
+import openfl.text.TextField;
 import utils.KeyPoll;
 import input.Input;
 import openfl.display.Sprite;
@@ -18,6 +22,7 @@ class Main3 extends AbstractEngine {
 
 	public function new() {
 		super();
+        createLabel();
 		model.bounds.size = AVConstructor.create(stage.stageWidth, stage.stageHeight);
 		model.balls.push(new Ball(graphics));
 		model.gravity[vertical] = 100;
@@ -38,6 +43,18 @@ class Main3 extends AbstractEngine {
 		for (s in systems)
 			s.update(1 / 60);
 	}
+
+    function createLabel() {
+        var t = new TextField();
+        model.t = t;
+        var tf = new TextFormat("Calibri", 86, 0xffffff, true, false, false, null, null, TextFormatAlign.CENTER);
+        t.type = TextFieldType.DYNAMIC;
+        t.defaultTextFormat = tf;
+        t.width = stage.stageWidth;
+        t.text = "00";
+        t.y = stage.stageHeight * .33;
+        addChild(t);
+    }
 }
 
 interface PointParticle {
@@ -60,7 +77,7 @@ class Ball implements IBall {
 	public var r:Float = 20;
 	public var state:BallState = Ballistic;
 	public var graphics:Graphics;
-	public var color:Int = 0x903020;
+	public var color:Int = 0x4FBDD6;
 	public var transitionTime:Float = 0;
 
 	public function new(gr) {
@@ -79,6 +96,8 @@ class Model {
 	public var input:Input;
 	public var platformPosition = 0.66;
 	public var transitionDuration:Float = 0.5;
+    public var t:TextField;
+    public var floor = AVConstructor.create(Axis2D, 0,0);
 
 	public function new() {
 		var keys = new KeyPoll(openfl.Lib.current.stage);
@@ -103,6 +122,7 @@ class System {
 
 class GameBounds extends System {
 	override public function update(dt) {
+        var dirty = false;
 		for (pp in model.balls) {
 			var pos = pp.pos;
 
@@ -111,12 +131,20 @@ class GameBounds extends System {
 				var r = model.bounds.pos[a] + model.bounds.size[a];
 				var s = model.bounds.size[a];
 
-				while (pos[a] > r)
+				while (pos[a] > r){
 					pos[a] -= s;
-				while (pos[a] < l)
+                    model.floor[a] --;
+                    dirty = true;
+                }
+				while (pos[a] < l){
 					pos[a] += s;
+                    model.floor[a] ++;
+                    dirty = true;
+                }
 			}
 		}
+        if(dirty)
+            model.t.text = "" + model.floor[vertical];
 	}
 }
 
