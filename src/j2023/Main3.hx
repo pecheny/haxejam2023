@@ -22,9 +22,11 @@ class Main3 extends AbstractEngine {
 
 	public function new() {
 		super();
-		createLabel();
 		model.bounds.size = AVConstructor.create(stage.stageWidth, stage.stageHeight);
-		model.balls.push(new Ball(graphics));
+		createLabel();
+		var canvas = new Sprite();
+		addChild(canvas);
+		model.balls.push(new Ball(canvas.graphics));
 		model.gravity[vertical] = 100;
 		model.platform = new Platform(100);
 		model.platform.y = model.bounds.size[vertical] * model.platformPosition;
@@ -36,6 +38,7 @@ class Main3 extends AbstractEngine {
 		systems.push(new PlatformMotor(model));
 		systems.push(new PlatformDetector(model));
 		systems.push(new PlatformElastics(model));
+		systems.push(new PlatformJumper(model));
 	}
 
 	override function update(t:Float) {
@@ -47,8 +50,9 @@ class Main3 extends AbstractEngine {
 	function createLabel() {
 		var t = new TextField();
 		model.t = t;
-		var tf = new TextFormat("Calibri", 86, 0xffffff, true, false, false, null, null, TextFormatAlign.CENTER);
+		var tf = new TextFormat("Calibri", 186, 0x517bcf, true, false, false, null, null, TextFormatAlign.CENTER);
 		t.type = TextFieldType.DYNAMIC;
+        t.height = 300;
 		t.defaultTextFormat = tf;
 		t.width = stage.stageWidth;
 		t.text = "00";
@@ -163,6 +167,26 @@ class Ballistics extends System {
 	}
 }
 
+@:enum abstract PlatformState(Int) {
+	var idle;
+	var jumping;
+}
+
+class PlatformJumper extends System {
+	var state:PlatformState = idle;
+	var t:Float;
+
+	override function update(dt:Float) {
+		switch state {
+			case idle:
+				if (model.input.pressed(GameButtons.jump)) {
+					model.platform.speed[vertical] -= 190;
+				}
+			case jumping:
+		}
+	}
+}
+
 class PlatformElastics extends System {
 	var k = 300.;
 	var c = 50.;
@@ -202,14 +226,13 @@ class PlatformDetector extends System {
 			ball.transitionTime = 0;
 			ball.spd[vertical] = -1 * ball.spd[vertical] + model.platform.speed[vertical];
 			ball.pos[vertical] = model.platform.y - ball.r - 1;
-            var platformIntegralSpeed = ( model.platform.x - platformInitial ) / model.transitionDuration;
-            ball.spd[horizontal] += platformIntegralSpeed;
+			var platformIntegralSpeed = (model.platform.x - platformInitial) / model.transitionDuration;
+			ball.spd[horizontal] += platformIntegralSpeed;
 			ball.state = Ballistic;
 			return;
 		}
 		ball.pos[vertical] = model.platform.y - ball.r;
 		ball.pos[horizontal] = model.platform.x + localX;
-
 	}
 
 	function handleBallistic(ball:Ball, dt:Float) {
@@ -250,13 +273,12 @@ class BallRenderer extends System {
 					g.drawCircle(b.pos[Axis2D.horizontal], b.pos[Axis2D.vertical], b.r);
 				case Bounce(_):
 					var t = b.transitionTime / model.transitionDuration;
-                    var easyt = 1 - (t-0.5)*(t-0.5) * 4;
+					var easyt = 1 - (t - 0.5) * (t - 0.5) * 4;
 					var r = b.r;
 					var compressedR = lerp(easyt, r, r * 0.7);
 					// var extendedR = Math.sqrt(r * r - compressedR * compressedR);
-					var extendedR = r + (r-compressedR);
-					g.drawEllipse(b.pos[Axis2D.horizontal] - extendedR, b.pos[Axis2D.vertical] - compressedR, extendedR*2, compressedR*2);
-
+					var extendedR = r + (r - compressedR);
+					g.drawEllipse(b.pos[Axis2D.horizontal] - extendedR, b.pos[Axis2D.vertical] - compressedR, extendedR * 2, compressedR * 2);
 			}
 			g.endFill();
 		}
