@@ -223,14 +223,17 @@ class PlatformDetector extends System {
 	function handleBounce(ball:Ball, dt, localX, platformInitial:Float) {
 		ball.transitionTime += dt;
 		if (ball.transitionTime >= model.transitionDuration) {
-			ball.transitionTime = 0;
 			ball.spd[vertical] = -1 * ball.spd[vertical] + model.platform.speed[vertical];
 			ball.pos[vertical] = model.platform.y - ball.r - 1;
 			var platformIntegralSpeed = (model.platform.x - platformInitial) / model.transitionDuration;
 			ball.spd[horizontal] += platformIntegralSpeed;
 			ball.state = Ballistic;
+			ball.transitionTime = 0;
 			return;
-		}
+		} else if (model.platform.speed[vertical]>ball.spd[vertical]){
+			ball.state = Ballistic;
+			ball.transitionTime = 0;
+        }
 		ball.pos[vertical] = model.platform.y - ball.r;
 		ball.pos[horizontal] = model.platform.x + localX;
 	}
@@ -294,7 +297,7 @@ class PlatformMotor extends System {
 		var p = model.platform;
 		var l = model.bounds.pos[horizontal] + p.w / 2;
 		var r = model.bounds.size[horizontal] - p.w / 2;
-		var o = model.input.getDirProjection(horizontal) * 90 * dt;
+		var o = model.input.getDirProjection(horizontal) * 230 * dt;
 		p.x = MathUtil.clamp(p.x + o, l, r);
 	}
 }
