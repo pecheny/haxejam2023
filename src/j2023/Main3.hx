@@ -22,7 +22,7 @@ class Main3 extends AbstractEngine {
 
 	public function new() {
 		super();
-        createLabel();
+		createLabel();
 		model.bounds.size = AVConstructor.create(stage.stageWidth, stage.stageHeight);
 		model.balls.push(new Ball(graphics));
 		model.gravity[vertical] = 100;
@@ -44,17 +44,17 @@ class Main3 extends AbstractEngine {
 			s.update(1 / 60);
 	}
 
-    function createLabel() {
-        var t = new TextField();
-        model.t = t;
-        var tf = new TextFormat("Calibri", 86, 0xffffff, true, false, false, null, null, TextFormatAlign.CENTER);
-        t.type = TextFieldType.DYNAMIC;
-        t.defaultTextFormat = tf;
-        t.width = stage.stageWidth;
-        t.text = "00";
-        t.y = stage.stageHeight * .33;
-        addChild(t);
-    }
+	function createLabel() {
+		var t = new TextField();
+		model.t = t;
+		var tf = new TextFormat("Calibri", 86, 0xffffff, true, false, false, null, null, TextFormatAlign.CENTER);
+		t.type = TextFieldType.DYNAMIC;
+		t.defaultTextFormat = tf;
+		t.width = stage.stageWidth;
+		t.text = "00";
+		t.y = stage.stageHeight * .33;
+		addChild(t);
+	}
 }
 
 interface PointParticle {
@@ -95,9 +95,9 @@ class Model {
 	public var gravity:AVector2D<Float> = AVConstructor.create(0, 0);
 	public var input:Input;
 	public var platformPosition = 0.66;
-	public var transitionDuration:Float = 0.5;
-    public var t:TextField;
-    public var floor = AVConstructor.create(Axis2D, 0,0);
+	public var transitionDuration:Float = 0.2;
+	public var t:TextField;
+	public var floor = AVConstructor.create(Axis2D, 0, 0);
 
 	public function new() {
 		var keys = new KeyPoll(openfl.Lib.current.stage);
@@ -122,7 +122,7 @@ class System {
 
 class GameBounds extends System {
 	override public function update(dt) {
-        var dirty = false;
+		var dirty = false;
 		for (pp in model.balls) {
 			var pos = pp.pos;
 
@@ -131,20 +131,20 @@ class GameBounds extends System {
 				var r = model.bounds.pos[a] + model.bounds.size[a];
 				var s = model.bounds.size[a];
 
-				while (pos[a] > r){
+				while (pos[a] > r) {
 					pos[a] -= s;
-                    model.floor[a] --;
-                    dirty = true;
-                }
-				while (pos[a] < l){
+					model.floor[a]--;
+					dirty = true;
+				}
+				while (pos[a] < l) {
 					pos[a] += s;
-                    model.floor[a] ++;
-                    dirty = true;
-                }
+					model.floor[a]++;
+					dirty = true;
+				}
 			}
 		}
-        if(dirty)
-            model.t.text = "" + model.floor[vertical];
+		if (dirty)
+			model.t.text = "" + model.floor[vertical];
 	}
 }
 
@@ -199,13 +199,13 @@ class PlatformDetector extends System {
 	function handleBounce(ball:Ball, dt) {
 		ball.transitionTime += dt;
 		if (ball.transitionTime >= model.transitionDuration) {
-            ball.transitionTime = 0;
-            ball.spd[vertical] = -1 *ball.spd[vertical] + model.platform.speed[vertical];
-            ball.pos[vertical] = model.platform.y - ball.r -1;
-            ball.state = Ballistic;
-            return;
-        }
-        ball.pos[vertical] = model.platform.y - ball.r;
+			ball.transitionTime = 0;
+			ball.spd[vertical] = -1 * ball.spd[vertical] + model.platform.speed[vertical];
+			ball.pos[vertical] = model.platform.y - ball.r - 1;
+			ball.state = Ballistic;
+			return;
+		}
+		ball.pos[vertical] = model.platform.y - ball.r;
 	}
 
 	function handleBallistic(ball:Ball, dt:Float) {
@@ -230,8 +230,8 @@ class PlatformDetector extends System {
 		// ball.pos[vertical] = model.platform.y - ball.r - 1;
 		// model.platform.y += 20;
 		model.platform.speed[vertical] += ball.spd[vertical];
-        ball.transitionTime = 0;
-        ball.state = Bounce;
+		ball.transitionTime = 0;
+		ball.state = Bounce;
 	}
 }
 
@@ -241,10 +241,26 @@ class BallRenderer extends System {
 			var g = b.graphics;
 			g.clear();
 			g.beginFill(b.color);
-			g.drawCircle(b.pos[Axis2D.horizontal], b.pos[Axis2D.vertical], b.r);
+			switch b.state {
+				case Ballistic:
+					g.drawCircle(b.pos[Axis2D.horizontal], b.pos[Axis2D.vertical], b.r);
+				case Bounce:
+					var t = b.transitionTime / model.transitionDuration;
+                    var easyt = 1 - (t-0.5)*(t-0.5) * 4;
+					var r = b.r;
+					var compressedR = lerp(easyt, r, r * 0.7);
+					// var extendedR = Math.sqrt(r * r - compressedR * compressedR);
+					var extendedR = r + (r-compressedR);
+					g.drawEllipse(b.pos[Axis2D.horizontal] - extendedR, b.pos[Axis2D.vertical] - compressedR, extendedR*2, compressedR*2);
+
+			}
 			g.endFill();
 		}
 	}
+
+	public static inline function lerp /*unclamped*/ (pct:Float, lo:Float, ho:Float):Float {
+		return (ho - lo) * pct + lo;
+	};
 }
 
 class PlatformMotor extends System {
