@@ -1,5 +1,6 @@
 package j2023;
 
+import utils.Data.Vec2D;
 import utils.KeyBinder;
 import openfl.text.TextFormat;
 import openfl.text.TextFormatAlign;
@@ -310,25 +311,43 @@ class PlatformDetector extends System {
 		var localX = ball.pos[horizontal] - model.platform.x;
 		var r = ball.r;
 		if (localY + (r + model.platform.h / 2) < 0) {
-			// trace("a " + localY  + " " + sign);
 			return;
 		}
 		if (localY - (r + model.platform.h / 2) > 0) {
-			// trace("b " + localY  + " " + sign);
 			return;
 		}
-
+		var localVSpd = ball.spd[vertical] - model.platform.speed[vertical];
+		if (localVSpd * sign < 0) {
+			return;
+		}
 		var x = localX;
 		if (x + r < left || x - r > right)
 			return;
-		var localVSpd = ball.spd[vertical] - model.platform.speed[vertical];
-		if (localVSpd * sign < 0) {
-			// trace("c" + localVSpd  + " " + ball.spd[vertical]);
-			return;
-		}
 		if (x > left && x < right)
 			straightBounce(ball);
+        else 
+            cornerHit(ball);
 	}
+    var cornerPos = new Vec2D(0,0);
+    var localPos = new Vec2D(0,0);
+    var localSpd = new Vec2D(0,0);
+    var normal = new Vec2D(0,0);
+	function cornerHit(ball:Ball) {
+        var pl = model.platform;
+        var ballSpd:Vec2D = cast ball.spd;
+        var platfSpd:Vec2D = cast pl.speed;
+        localSpd.copyFrom(ballSpd);
+        localSpd.remove(platfSpd);
+        localPos.x = ball.pos[horizontal] - pl.x;
+        localPos.y = ball.pos[vertical] - pl.y;
+        cornerPos.x = localPos.x > 0 ? pl.w/2 : -pl.w/2;
+        normal.copyFrom(cornerPos);
+        normal.remove(localPos);
+        normal.normalize(1);
+        localSpd.reflect(normal);
+        ballSpd.x = localSpd.x + platfSpd.x;
+        ballSpd.y = localSpd.y + platfSpd.y;
+    }
 
 	function straightBounce(ball:Ball) {
 		// ball.spd[vertical] *= -1;
