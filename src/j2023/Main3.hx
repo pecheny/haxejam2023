@@ -34,12 +34,21 @@ class Main3 extends AbstractEngine {
 		systems.push(new GameBounds(model));
 		systems.push(new BallRenderer(model));
 		systems.push(new PlatformMotor(model));
-		systems.push(new PlatformDetector(model));
-		systems.push(new PlatformElastics(model));
+		systems.push(new PlatformDetector(model, 1));
+		systems.push(new PlatformDetector(model, -1));
+		// systems.push(new PlatformElastics(model));
 		systems.push(new PlatformJumper(model));
+		var keys = new KeyBinder();
+		keys.addCommand(Keyboard.R, model.reset);
+		keys.addCommand(Keyboard.P, () -> { p = !p;
+        trace("p"); });
 	}
 
+	var p = false;
+
 	override function update(t:Float) {
+		if (p)
+			return;
 		super.update(t);
 		for (s in systems)
 			s.update(1 / 60);
@@ -108,8 +117,6 @@ class Model {
 			up: Keyboard.UP,
 			down: Keyboard.DOWN,
 		}, keys, [GameButtons.jump => Keyboard.SPACE]);
-		var keys = new KeyBinder();
-		keys.addCommand(Keyboard.R, reset);
 		t = new TextField();
 		gravity[vertical] = 100;
 		platform = new Platform(100);
@@ -120,9 +127,9 @@ class Model {
 		for (ball in balls) {
 			ball.pos[horizontal] = 300;
 			ball.pos[vertical] = 400;
-			// ball.pos[vertical] = 700;
+			ball.pos[vertical] = 700;
 			ball.spd[horizontal] = Math.random() * 20 - 10;
-			ball.spd[vertical] = -200;
+			ball.spd[vertical] = -130;
 		}
 		floor[horizontal] = 0;
 		floor[vertical] = 0;
@@ -231,6 +238,11 @@ class PlatformElastics extends System {
 class PlatformDetector extends System {
 	var sign = 1;
 
+	public function new(m, sign) {
+		super(m);
+		this.sign = sign;
+	}
+
 	override function update(dt:Float) {
 		for (ball in model.balls) {
 			switch ball.state {
@@ -246,20 +258,23 @@ class PlatformDetector extends System {
 	function handleBounce(ball:Ball, dt, localX, platformInitial:Float) {
 		ball.transitionTime += dt;
 		if (ball.transitionTime >= model.transitionDuration) {
-			var platformSpeedup = if (model.platform.speed[vertical] * ball.spd[vertical] < 0) model.platform.speed[vertical] else 0;
-			ball.spd[vertical] = -1 * ball.spd[vertical] + platformSpeedup;
-			ball.pos[vertical] = model.platform.y - (ball.r + model.platform.h / 2 + 1) * sign;
+			if (ball.spd[vertical] * sign > 0)
+				ball.spd[vertical] *= -1;
+			if (model.platform.speed[vertical] * ball.spd[vertical] > 0)
+				ball.spd[vertical] += model.platform.speed[vertical];
+			ball.pos[vertical] = model.platform.y - (ball.r + model.platform.h / 2 + 4) * sign;
 			var platformIntegralSpeed = (model.platform.x - platformInitial) / model.transitionDuration;
 			ball.spd[horizontal] += platformIntegralSpeed;
 			ball.state = Ballistic;
 			ball.transitionTime = 0;
-			return;
-		} else if (sign * (model.platform.speed[vertical] - ball.spd[vertical]) > 0) {
-			ball.state = Ballistic;
-			ball.transitionTime = 0;
+			// } else if (sign * (model.platform.speed[vertical] - ball.spd[vertical]) > 0) {
+			// 	ball.state = Ballistic;
+			// 	ball.transitionTime = 0;
+			//     ball.pos[vertical] -=  sign * 3;
+		} else {
+			ball.pos[vertical] = model.platform.y - (ball.r + model.platform.h / 2) * sign;
+			ball.pos[horizontal] = model.platform.x + localX;
 		}
-		ball.pos[vertical] = model.platform.y - (ball.r + model.platform.h / 2) * sign;
-		ball.pos[horizontal] = model.platform.x + localX;
 	}
 
 	function handleBallistic(ball:Ball, dt:Float) {
@@ -267,23 +282,34 @@ class PlatformDetector extends System {
 		var right:Float = model.platform.w / 2;
 		var localY = ball.pos[vertical] - model.platform.y;
 		var localX = ball.pos[horizontal] - model.platform.x;
-		var r = ball.r * sign;
-		if (localY + r < -model.platform.h / 2)
+		var r = ball.r;
+		if (localY +  (r + model.platform.h / 2) < 0) {
+			// trace("a " + localY  + " " + sign);
 			return;
-		if (localY - r > model.platform.h / 2)
+		}
+		if (localY -  (r + model.platform.h / 2) > 0) {
+			// trace("b " + localY  + " " + sign);
 			return;
+		}
+
 		var x = localX;
 		if (x + r < left || x - r > right)
 			return;
+		var localVSpd = ball.spd[vertical] - model.platform.speed[vertical];
+		if (localVSpd * sign < 0){
+		    // trace("c" + localVSpd  + " " + ball.spd[vertical]);
+			return;
+		}
 		if (x > left && x < right)
 			straightBounce(ball);
 	}
 
 	function straightBounce(ball:Ball) {
+		trace("start bouncing");
 		// ball.spd[vertical] *= -1;
 		// ball.pos[vertical] = model.platform.y - ball.r - 1;
 		// model.platform.y += 20;
-		model.platform.speed[vertical] += ball.spd[vertical];
+		// model.platform.speed[vertical] += ball.spd[vertical];
 		ball.transitionTime = 0;
 		ball.state = Bounce(ball.pos[horizontal] - model.platform.x, model.platform.x, sign);
 	}
