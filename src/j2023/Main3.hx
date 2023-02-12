@@ -28,7 +28,7 @@ class Main3 extends AbstractEngine {
 		var canvas = new Sprite();
 		addChild(canvas);
 		model.balls.push(new Ball(canvas.graphics));
-        model.reset();
+		model.reset();
 		addChild(model.platform);
 		systems.push(new Ballistics(model));
 		systems.push(new GameBounds(model));
@@ -69,7 +69,7 @@ interface IBall extends PointParticle {
 
 enum BallState {
 	Ballistic;
-	Bounce(onPlatformX:Float, platformPos:Float);
+	Bounce(onPlatformX:Float, platformPos:Float, sign:Int);
 }
 
 class Ball implements IBall {
@@ -108,9 +108,9 @@ class Model {
 			up: Keyboard.UP,
 			down: Keyboard.DOWN,
 		}, keys, [GameButtons.jump => Keyboard.SPACE]);
-        var keys = new KeyBinder();
-        keys.addCommand(Keyboard.R, reset);
-        t = new TextField();
+		var keys = new KeyBinder();
+		keys.addCommand(Keyboard.R, reset);
+		t = new TextField();
 		gravity[vertical] = 100;
 		platform = new Platform(100);
 		platformPosition = 0.66;
@@ -120,15 +120,16 @@ class Model {
 		for (ball in balls) {
 			ball.pos[horizontal] = 300;
 			ball.pos[vertical] = 400;
+			// ball.pos[vertical] = 700;
 			ball.spd[horizontal] = Math.random() * 20 - 10;
-			ball.spd[vertical] = -20;
+			ball.spd[vertical] = -200;
 		}
-        floor[horizontal] = 0;
-        floor[vertical] = 0;
+		floor[horizontal] = 0;
+		floor[vertical] = 0;
 		platform.y = bounds.size[vertical] * platformPosition;
 		platform.x = bounds.size[horizontal] * 0.5;
-        platform.speed[horizontal] = 0;
-        platform.speed[vertical] = 0;
+		platform.speed[horizontal] = 0;
+		platform.speed[vertical] = 0;
 		t.text = "0";
 	}
 }
@@ -228,13 +229,16 @@ class PlatformElastics extends System {
 }
 
 class PlatformDetector extends System {
+	var sign = 1;
+
 	override function update(dt:Float) {
 		for (ball in model.balls) {
 			switch ball.state {
 				case Ballistic:
 					handleBallistic(ball, dt);
-				case Bounce(localx, platformInitial):
-					handleBounce(ball, dt, localx, platformInitial);
+				case Bounce(localx, platformInitial, sign):
+					if (sign == this.sign)
+						handleBounce(ball, dt, localx, platformInitial);
 			}
 		}
 	}
@@ -242,18 +246,19 @@ class PlatformDetector extends System {
 	function handleBounce(ball:Ball, dt, localX, platformInitial:Float) {
 		ball.transitionTime += dt;
 		if (ball.transitionTime >= model.transitionDuration) {
-			ball.spd[vertical] = -1 * ball.spd[vertical] + model.platform.speed[vertical];
-			ball.pos[vertical] = model.platform.y - ball.r - 1;
+			var platformSpeedup = if (model.platform.speed[vertical] * ball.spd[vertical] < 0) model.platform.speed[vertical] else 0;
+			ball.spd[vertical] = -1 * ball.spd[vertical] + platformSpeedup;
+			ball.pos[vertical] = model.platform.y - (ball.r + model.platform.h / 2 + 1) * sign;
 			var platformIntegralSpeed = (model.platform.x - platformInitial) / model.transitionDuration;
 			ball.spd[horizontal] += platformIntegralSpeed;
 			ball.state = Ballistic;
 			ball.transitionTime = 0;
 			return;
-		} else if (model.platform.speed[vertical] > ball.spd[vertical]) {
+		} else if (sign * (model.platform.speed[vertical] - ball.spd[vertical]) > 0) {
 			ball.state = Ballistic;
 			ball.transitionTime = 0;
 		}
-		ball.pos[vertical] = model.platform.y - ball.r;
+		ball.pos[vertical] = model.platform.y - (ball.r + model.platform.h / 2) * sign;
 		ball.pos[horizontal] = model.platform.x + localX;
 	}
 
@@ -262,10 +267,10 @@ class PlatformDetector extends System {
 		var right:Float = model.platform.w / 2;
 		var localY = ball.pos[vertical] - model.platform.y;
 		var localX = ball.pos[horizontal] - model.platform.x;
-		var r = ball.r;
-		if (localY + r < 0)
+		var r = ball.r * sign;
+		if (localY + r < -model.platform.h / 2)
 			return;
-		if (localY - r > model.platform.h)
+		if (localY - r > model.platform.h / 2)
 			return;
 		var x = localX;
 		if (x + r < left || x - r > right)
@@ -280,7 +285,7 @@ class PlatformDetector extends System {
 		// model.platform.y += 20;
 		model.platform.speed[vertical] += ball.spd[vertical];
 		ball.transitionTime = 0;
-		ball.state = Bounce(ball.pos[horizontal] - model.platform.x, model.platform.x);
+		ball.state = Bounce(ball.pos[horizontal] - model.platform.x, model.platform.x, sign);
 	}
 }
 
@@ -331,10 +336,10 @@ class Platform extends Sprite {
 		super();
 		this.w = w;
 		graphics.beginFill(0);
-		graphics.drawRect(-w / 2, 0, w, h);
+		graphics.drawRect(-w / 2, -h / 2, w, h);
 		graphics.endFill();
-		graphics.beginFill(0xff0000);
-		graphics.drawRect(-w / 2, 0, w, 2);
-		graphics.endFill();
+		// graphics.beginFill(0xff0000);
+		// graphics.drawRect(-w / 2, 0, w, 2);
+		// graphics.endFill();
 	}
 }
