@@ -6,7 +6,7 @@ import openfl.events.Event;
 import openfl.Lib;
 import utils.Updatable;
 class AbstractEngine extends Sprite implements Updater {
-    var last:Int;
+    var last:Float = 0;
     var timeMultiplier:Float = 1;
     var updatables:Array<Updatable> = [];
 
@@ -31,7 +31,7 @@ class AbstractEngine extends Sprite implements Updater {
         var elapsed = (time - last) / 1000;
         if (elapsed > maxElapsed) elapsed = maxElapsed;
         last = time;
-//        update(maxElapsed);
+        // update(elapsed );
         update(elapsed * timeMultiplier);
     }
 

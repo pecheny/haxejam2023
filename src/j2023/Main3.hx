@@ -23,6 +23,11 @@ class Main3 extends AbstractEngine {
 
 	public function new() {
 		super();
+		// stage.window.frameRate = 60;
+        // lime.app.Application.current.window.frameRate = 60;
+        // timeMultiplier = 1.5;
+
+
 		model.bounds.size = AVConstructor.create(stage.stageWidth, stage.stageHeight);
 		createLabel();
 		var canvas = new Sprite();
@@ -40,18 +45,19 @@ class Main3 extends AbstractEngine {
 		systems.push(new PlatformJumper(model));
 		var keys = new KeyBinder();
 		keys.addCommand(Keyboard.R, model.reset);
-		keys.addCommand(Keyboard.P, () -> { p = !p;
-        trace("p"); });
+		keys.addCommand(Keyboard.P, () -> {
+			p = !p;
+			trace("p");
+		});
 	}
 
 	var p = false;
 
-	override function update(t:Float) {
+	override function update(dt:Float) {
 		if (p)
 			return;
-		super.update(t);
 		for (s in systems)
-			s.update(1 / 60);
+			s.update(dt);
 	}
 
 	function createLabel() {
@@ -207,16 +213,16 @@ class PlatformJumper extends System {
 		switch state {
 			case idle:
 				if (model.input.pressed(GameButtons.jump)) {
-					model.platform.speed[vertical] -= 400;
-                    // state=jumping;
-                    t=0;
+					model.platform.speed[vertical] -= 400 * (dt * 60);
+					// state=jumping;
+					t = 0;
 				}
 			case jumping:
-                // t+=dt;
-                // if(t < 0.6)
+				// t+=dt;
+				// if(t < 0.6)
 				// 	model.platform.speed[vertical] -= 200;
-                // if (t > 1)
-                //     state = idle;
+				// if (t > 1)
+				//     state = idle;
 		}
 	}
 }
@@ -274,10 +280,10 @@ class PlatformDetector extends System {
 			ball.spd[horizontal] += platformIntegralSpeed;
 			ball.state = Ballistic;
 			ball.transitionTime = 0;
-			} else if (sign * (model.platform.speed[vertical] - ball.spd[vertical]) > 0) {
-				ball.state = Ballistic;
-				ball.transitionTime = 0;
-			    ball.pos[vertical] -=  sign * 3;
+		} else if (sign * (model.platform.speed[vertical] - ball.spd[vertical]) > 0) {
+			ball.state = Ballistic;
+			ball.transitionTime = 0;
+			ball.pos[vertical] -= sign * 3;
 		} else {
 			ball.pos[vertical] = model.platform.y - (ball.r + model.platform.h / 2) * sign;
 			ball.pos[horizontal] = model.platform.x + localX;
@@ -290,11 +296,11 @@ class PlatformDetector extends System {
 		var localY = ball.pos[vertical] - model.platform.y;
 		var localX = ball.pos[horizontal] - model.platform.x;
 		var r = ball.r;
-		if (localY +  (r + model.platform.h / 2) < 0) {
+		if (localY + (r + model.platform.h / 2) < 0) {
 			// trace("a " + localY  + " " + sign);
 			return;
 		}
-		if (localY -  (r + model.platform.h / 2) > 0) {
+		if (localY - (r + model.platform.h / 2) > 0) {
 			// trace("b " + localY  + " " + sign);
 			return;
 		}
@@ -303,8 +309,8 @@ class PlatformDetector extends System {
 		if (x + r < left || x - r > right)
 			return;
 		var localVSpd = ball.spd[vertical] - model.platform.speed[vertical];
-		if (localVSpd * sign < 0){
-		    // trace("c" + localVSpd  + " " + ball.spd[vertical]);
+		if (localVSpd * sign < 0) {
+			// trace("c" + localVSpd  + " " + ball.spd[vertical]);
 			return;
 		}
 		if (x > left && x < right)
