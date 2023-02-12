@@ -36,9 +36,9 @@ class Main3 extends AbstractEngine {
 		initLabel(model.windLabel, 48, stage.stageHeight * .33 - 100);
 		canvas = new Sprite();
 		addChild(canvas);
-		model.addBall(new Ball(canvas.graphics));
-		model.addBall(new Ball(canvas.graphics));
-		model.addBall(new Ball(canvas.graphics));
+		model.addBall(createBall());
+		model.addBall(createBall());
+		model.addBall(createBall());
 		model.reset();
 		addChild(model.platform);
 		systems.push(new Ballistics(model));
@@ -56,6 +56,12 @@ class Main3 extends AbstractEngine {
 			p = !p;
 			trace("p");
 		});
+	}
+
+	function createBall() {
+		var b = new Ball(null);
+		addChild(b.view);
+		return b;
 	}
 
 	var p = false;
@@ -97,6 +103,7 @@ enum BallState {
 class Ball implements IBall {
 	public var pos(default, null):AVector2D<Float> = AVConstructor.create(0, 0);
 	public var spd(default, null):AVector2D<Float> = AVConstructor.create(0, 0);
+	public var view:Sprite;
 	public var r:Float = 20;
 	public var state:BallState = Ballistic;
 	public var graphics:Graphics;
@@ -105,6 +112,10 @@ class Ball implements IBall {
 
 	public function new(gr) {
 		this.graphics = gr;
+		view = new Sprite();
+		view.graphics.beginFill(color);
+		view.graphics.drawCircle(pos[Axis2D.horizontal], pos[Axis2D.vertical], r);
+        view.graphics.endFill();
 	}
 }
 
@@ -115,7 +126,8 @@ class Model {
 	};
 
 	var _balls(default, null):Array<Ball> = [];
-    public var platformSpdMul = 1.;
+
+	public var platformSpdMul = 1.;
 	public var balls(default, null):Array<Ball> = [];
 	public var platform:Platform;
 	public var gravity:AVector2D<Float> = AVConstructor.create(0, 0);
@@ -163,13 +175,14 @@ class Model {
 
 	public function reset() {
 		balls.resize(0);
-        moreBalls(1);
+		moreBalls(1);
 		for (ball in _balls) {
 			ball.pos[horizontal] = 300;
 			ball.pos[vertical] = 400 + Math.random() * 100;
 			// ball.pos[vertical] = 700;
 			ball.spd[horizontal] = Math.random() * 20 - 10;
 			ball.spd[vertical] = 430;
+            ball.view.y = -100;
 		}
 		floor[horizontal] = 0;
 		floor[vertical] = 0;
@@ -179,7 +192,7 @@ class Model {
 		platform.speed[vertical] = 0;
 		gravity[horizontal] = 0;
 		record = 0;
-        platformSpdMul = 1;
+		platformSpdMul = 1;
 		updateLabels();
 		randomizeGate(entrance);
 		randomizeGate(exit);
@@ -203,7 +216,7 @@ class Model {
 		if (floor[vertical] > 30)
 			moreBalls(3);
 		if (floor[vertical] > 5)
-            platformSpdMul = 0.5 + Math.random();
+			platformSpdMul = 0.5 + Math.random();
 		windLabel.text = "wind: " + Std.int(gravity[horizontal] * 100);
 		var v = floor[vertical];
 		floorLabel.text = "" + v;
@@ -419,21 +432,24 @@ class PlatformDetector extends System {
 class BallRenderer extends System {
 	override function update(dt) {
 		for (b in model.balls) {
-			var g = b.graphics;
-			g.beginFill(b.color);
+			b.view.x = b.pos[horizontal];
+			b.view.y = b.pos[vertical];
 			switch b.state {
 				case Ballistic:
-					g.drawCircle(b.pos[Axis2D.horizontal], b.pos[Axis2D.vertical], b.r);
+					if (b.view.scaleX == 1)
+						continue;
+					b.view.scaleX = 1;
+					b.view.scaleY = 1;
+
 				case Bounce(_):
 					var t = b.transitionTime / model.transitionDuration;
 					var easyt = 1 - (t - 0.5) * (t - 0.5) * 4;
-					var r = b.r;
+					var r = 1;
 					var compressedR = lerp(easyt, r, r * 0.7);
-					// var extendedR = Math.sqrt(r * r - compressedR * compressedR);
 					var extendedR = r + (r - compressedR);
-					g.drawEllipse(b.pos[Axis2D.horizontal] - extendedR, b.pos[Axis2D.vertical] - compressedR, extendedR * 2, compressedR * 2);
+					b.view.scaleX = extendedR;
+					b.view.scaleY = compressedR;
 			}
-			g.endFill();
 		}
 	}
 
