@@ -115,7 +115,7 @@ class Model {
 	};
 
 	var _balls(default, null):Array<Ball> = [];
-
+    public var platformSpdMul = 1.;
 	public var balls(default, null):Array<Ball> = [];
 	public var platform:Platform;
 	public var gravity:AVector2D<Float> = AVConstructor.create(0, 0);
@@ -179,6 +179,7 @@ class Model {
 		platform.speed[vertical] = 0;
 		gravity[horizontal] = 0;
 		record = 0;
+        platformSpdMul = 1;
 		updateLabels();
 		randomizeGate(entrance);
 		randomizeGate(exit);
@@ -201,6 +202,8 @@ class Model {
 			moreBalls(2);
 		if (floor[vertical] > 30)
 			moreBalls(3);
+		if (floor[vertical] > 5)
+            platformSpdMul = 0.5 + Math.random();
 		windLabel.text = "wind: " + Std.int(gravity[horizontal] * 100);
 		var v = floor[vertical];
 		floorLabel.text = "" + v;
@@ -444,7 +447,7 @@ class PlatformMotor extends System {
 		var p = model.platform;
 		var l = model.bounds.pos[horizontal] + p.w / 2;
 		var r = model.bounds.size[horizontal] - p.w / 2;
-		var o = model.input.getDirProjection(horizontal) * 230 * dt;
+		var o = model.input.getDirProjection(horizontal) * 230 * dt * model.platformSpdMul;
 		p.x = MathUtil.clamp(p.x + o, l, r);
 	}
 }
