@@ -22,6 +22,7 @@ import Axis2D;
 class Main3 extends AbstractEngine {
 	var model = new Model();
 	var systems:Array<System> = [];
+	var canvas:Sprite;
 
 	public function new() {
 		super();
@@ -33,9 +34,11 @@ class Main3 extends AbstractEngine {
 		initLabel(model.floorLabel, 186, stage.stageHeight * .33);
 		initLabel(model.recordLabel, 86, stage.stageHeight * .33 - 50);
 		initLabel(model.windLabel, 48, stage.stageHeight * .33 - 100);
-		var canvas = new Sprite();
+		canvas = new Sprite();
 		addChild(canvas);
-		model.balls.push(new Ball(canvas.graphics));
+		model.addBall(new Ball(canvas.graphics));
+		model.addBall(new Ball(canvas.graphics));
+		model.addBall(new Ball(canvas.graphics));
 		model.reset();
 		addChild(model.platform);
 		systems.push(new Ballistics(model));
@@ -60,6 +63,7 @@ class Main3 extends AbstractEngine {
 	override function update(dt:Float) {
 		if (p)
 			return;
+		canvas.graphics.clear();
 		for (s in systems)
 			s.update(dt);
 	}
@@ -109,6 +113,9 @@ class Model {
 		pos: AVConstructor.create(0, 0),
 		size: AVConstructor.create(0, 0),
 	};
+
+	var _balls(default, null):Array<Ball> = [];
+
 	public var balls(default, null):Array<Ball> = [];
 	public var platform:Platform;
 	public var gravity:AVector2D<Float> = AVConstructor.create(0, 0);
@@ -122,6 +129,10 @@ class Model {
 
 	public var entrance:Gate = new Gate(100, 0x00ff00);
 	public var exit:Gate = new Gate(100, 0xff0000);
+
+	public function addBall(b) {
+		_balls.push(b);
+	}
 
 	public function new() {
 		var keys = new KeyPoll(openfl.Lib.current.stage);
@@ -151,9 +162,11 @@ class Model {
 	}
 
 	public function reset() {
-		for (ball in balls) {
+		balls.resize(0);
+        moreBalls(1);
+		for (ball in _balls) {
 			ball.pos[horizontal] = 300;
-			ball.pos[vertical] = 400;
+			ball.pos[vertical] = 400 + Math.random() * 100;
 			// ball.pos[vertical] = 700;
 			ball.spd[horizontal] = Math.random() * 20 - 10;
 			ball.spd[vertical] = 430;
@@ -173,11 +186,21 @@ class Model {
 
 	var record = 0;
 
+	function moreBalls(n) {
+		if (balls.length < n)
+			balls.push(_balls[balls.length]);
+	}
+
 	public function updateLabels() {
-		if (floor[vertical] > 10)
+		if (floor[vertical] > 20)
 			gravity[horizontal] = if (Math.random() > 0.7) Math.random() * 30 - 15 else 0;
 		else
 			gravity[horizontal] = 0;
+
+		if (floor[vertical] > 10)
+			moreBalls(2);
+		if (floor[vertical] > 30)
+			moreBalls(3);
 		windLabel.text = "wind: " + Std.int(gravity[horizontal] * 100);
 		var v = floor[vertical];
 		floorLabel.text = "" + v;
@@ -394,7 +417,6 @@ class BallRenderer extends System {
 	override function update(dt) {
 		for (b in model.balls) {
 			var g = b.graphics;
-			g.clear();
 			g.beginFill(b.color);
 			switch b.state {
 				case Ballistic:
