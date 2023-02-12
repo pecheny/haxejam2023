@@ -3,7 +3,7 @@
     <set name="builds_folder" value="."/>
     <set name="builds_folder" value="/AndroidBuilds" if="android"/>
 
-    <meta title="your thoughts. lose them all" package="com.shoo.jam2022" version="1.0.0" company="pecheny"/>
+    <meta title="NEXT floor AGAIN" package="com.shoo.jam2023" version="1.0.0" company="pecheny"/>
     <app main="j2023.Main3" path="${builds_folder}/Export" file="j2023"/>
 
     <window antialiasing="4"/>
@@ -16,14 +16,12 @@
     <haxelib name="hxmath"/>
 
     <!-- <haxelib name="hxcpp-debugger"/> -->
-    <haxedef name="openfl_disable_context_cache" value="true"/>
-    <haxedef name="openfl_always_render" value="true"/>
+    <!-- <haxedef name="openfl_disable_context_cache" value="true"/>
+    <haxedef name="openfl_always_render" value="true"/> -->
 <!--    <haxedef name="js-es" value="6"/>-->
 <!--    <haxedef name="openfl_pool_events" value="true"/>-->
     <haxeflag name="-dce" value="full"/>
     <!-- <library path="Assets/art.swf" preload="true" generate="true"/> -->
-    <haxedef name="HXCPP_DEBUGGER"/>
-    <!--    <library path="Assets/j2022.swf" preload="true" generate="true"  />-->
     <assets path="Assets" include="*"/>
     <template path="templates" if="html5"/>
 </project>
