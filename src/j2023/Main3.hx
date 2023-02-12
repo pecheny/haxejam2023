@@ -281,7 +281,7 @@ class PlatformJumper extends System {
 	override function update(dt:Float) {
 		switch state {
 			case idle:
-				if (model.input.pressed(GameButtons.jump)) {
+				if (model.input.pressed(GameButtons.jump) || model.input.getDirProjection(vertical) < -0.5) {
 					model.platform.speed[vertical] -= 400 * (dt * 60);
 					// state=jumping;
 					t = 0;
