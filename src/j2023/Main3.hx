@@ -24,12 +24,12 @@ class Main3 extends AbstractEngine {
 	public function new() {
 		super();
 		// stage.window.frameRate = 60;
-        // lime.app.Application.current.window.frameRate = 60;
-        // timeMultiplier = 1.5;
-
+		// lime.app.Application.current.window.frameRate = 60;
+		// timeMultiplier = 1.5;
 
 		model.bounds.size = AVConstructor.create(stage.stageWidth, stage.stageHeight);
-		createLabel();
+		initLabel(model.floorLabel, 186, stage.stageHeight * .33);
+		initLabel(model.recordLabel, 86, stage.stageHeight * .33 - 50);
 		var canvas = new Sprite();
 		addChild(canvas);
 		model.balls.push(new Ball(canvas.graphics));
@@ -60,15 +60,14 @@ class Main3 extends AbstractEngine {
 			s.update(dt);
 	}
 
-	function createLabel() {
-		var t = model.t;
-		model.t = t;
-		var tf = new TextFormat("Calibri", 186, 0x517bcf, true, false, false, null, null, TextFormatAlign.CENTER);
+	function initLabel(t:TextField, size, pos) {
+		var tf = new TextFormat("Calibri", size, 0x517bcf, true, false, false, null, null, TextFormatAlign.CENTER);
 		t.type = TextFieldType.DYNAMIC;
-		t.height = 300;
+		t.selectable = false;
+		t.height = size;
 		t.defaultTextFormat = tf;
 		t.width = stage.stageWidth;
-		t.y = stage.stageHeight * .33;
+		t.y = pos;
 		addChild(t);
 	}
 }
@@ -112,7 +111,8 @@ class Model {
 	public var input:Input;
 	public var platformPosition:Float;
 	public var transitionDuration:Float = 0.2;
-	public var t:TextField;
+	public var floorLabel:TextField;
+	public var recordLabel:TextField;
 	public var floor = AVConstructor.create(Axis2D, 0, 0);
 
 	public function new() {
@@ -123,7 +123,8 @@ class Model {
 			up: Keyboard.UP,
 			down: Keyboard.DOWN,
 		}, keys, [GameButtons.jump => Keyboard.SPACE]);
-		t = new TextField();
+		floorLabel = new TextField();
+		recordLabel = new TextField();
 		gravity[vertical] = 100;
 		platform = new Platform(100);
 		platformPosition = 0.66;
@@ -143,7 +144,19 @@ class Model {
 		platform.x = bounds.size[horizontal] * 0.5;
 		platform.speed[horizontal] = 0;
 		platform.speed[vertical] = 0;
-		t.text = "0";
+		record = 0;
+		updateLabels();
+	}
+
+	var record = 0;
+
+	public function updateLabels() {
+		var v = floor[vertical];
+		floorLabel.text = "" + v;
+		if (v < record)
+			return;
+		record = v;
+		recordLabel.text = "MAX: " + v;
 	}
 }
 
@@ -181,7 +194,7 @@ class GameBounds extends System {
 			}
 		}
 		if (dirty)
-			model.t.text = "" + model.floor[vertical];
+			model.updateLabels();
 	}
 }
 
