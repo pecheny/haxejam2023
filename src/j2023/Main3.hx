@@ -36,7 +36,7 @@ class Main3 extends AbstractEngine {
 		systems.push(new PlatformMotor(model));
 		systems.push(new PlatformDetector(model, 1));
 		systems.push(new PlatformDetector(model, -1));
-		// systems.push(new PlatformElastics(model));
+		systems.push(new PlatformElastics(model));
 		systems.push(new PlatformJumper(model));
 		var keys = new KeyBinder();
 		keys.addCommand(Keyboard.R, model.reset);
@@ -309,7 +309,7 @@ class PlatformDetector extends System {
 		// ball.spd[vertical] *= -1;
 		// ball.pos[vertical] = model.platform.y - ball.r - 1;
 		// model.platform.y += 20;
-		// model.platform.speed[vertical] += ball.spd[vertical];
+		model.platform.speed[vertical] += ball.spd[vertical];
 		ball.transitionTime = 0;
 		ball.state = Bounce(ball.pos[horizontal] - model.platform.x, model.platform.x, sign);
 	}
