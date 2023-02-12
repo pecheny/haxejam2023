@@ -127,9 +127,9 @@ class Model {
 		for (ball in balls) {
 			ball.pos[horizontal] = 300;
 			ball.pos[vertical] = 400;
-			ball.pos[vertical] = 700;
+			// ball.pos[vertical] = 700;
 			ball.spd[horizontal] = Math.random() * 20 - 10;
-			ball.spd[vertical] = -130;
+			ball.spd[vertical] = 430;
 		}
 		floor[horizontal] = 0;
 		floor[vertical] = 0;
@@ -207,9 +207,16 @@ class PlatformJumper extends System {
 		switch state {
 			case idle:
 				if (model.input.pressed(GameButtons.jump)) {
-					model.platform.speed[vertical] -= 190;
+					model.platform.speed[vertical] -= 400;
+                    // state=jumping;
+                    t=0;
 				}
 			case jumping:
+                // t+=dt;
+                // if(t < 0.6)
+				// 	model.platform.speed[vertical] -= 200;
+                // if (t > 1)
+                //     state = idle;
 		}
 	}
 }
@@ -267,10 +274,10 @@ class PlatformDetector extends System {
 			ball.spd[horizontal] += platformIntegralSpeed;
 			ball.state = Ballistic;
 			ball.transitionTime = 0;
-			// } else if (sign * (model.platform.speed[vertical] - ball.spd[vertical]) > 0) {
-			// 	ball.state = Ballistic;
-			// 	ball.transitionTime = 0;
-			//     ball.pos[vertical] -=  sign * 3;
+			} else if (sign * (model.platform.speed[vertical] - ball.spd[vertical]) > 0) {
+				ball.state = Ballistic;
+				ball.transitionTime = 0;
+			    ball.pos[vertical] -=  sign * 3;
 		} else {
 			ball.pos[vertical] = model.platform.y - (ball.r + model.platform.h / 2) * sign;
 			ball.pos[horizontal] = model.platform.x + localX;
@@ -305,7 +312,6 @@ class PlatformDetector extends System {
 	}
 
 	function straightBounce(ball:Ball) {
-		trace("start bouncing");
 		// ball.spd[vertical] *= -1;
 		// ball.pos[vertical] = model.platform.y - ball.r - 1;
 		// model.platform.y += 20;
