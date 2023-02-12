@@ -1,5 +1,6 @@
 package j2023;
 
+import openfl.geom.Point;
 import utils.Data.Vec2D;
 import utils.KeyBinder;
 import openfl.text.TextFormat;
@@ -31,6 +32,7 @@ class Main3 extends AbstractEngine {
 		model.bounds.size = AVConstructor.create(stage.stageWidth, stage.stageHeight);
 		initLabel(model.floorLabel, 186, stage.stageHeight * .33);
 		initLabel(model.recordLabel, 86, stage.stageHeight * .33 - 50);
+		initLabel(model.windLabel, 48, stage.stageHeight * .33 - 100);
 		var canvas = new Sprite();
 		addChild(canvas);
 		model.balls.push(new Ball(canvas.graphics));
@@ -44,6 +46,7 @@ class Main3 extends AbstractEngine {
 		systems.push(new PlatformDetector(model, -1));
 		systems.push(new PlatformElastics(model));
 		systems.push(new PlatformJumper(model));
+		// systems.push(new Portal(model));
 		var keys = new KeyBinder();
 		keys.addCommand(Keyboard.R, model.reset);
 		keys.addCommand(Keyboard.P, () -> {
@@ -114,7 +117,11 @@ class Model {
 	public var transitionDuration:Float = 0.2;
 	public var floorLabel:TextField;
 	public var recordLabel:TextField;
+	public var windLabel:TextField;
 	public var floor = AVConstructor.create(Axis2D, 0, 0);
+
+	public var entrance:Gate = new Gate(100, 0x00ff00);
+	public var exit:Gate = new Gate(100, 0xff0000);
 
 	public function new() {
 		var keys = new KeyPoll(openfl.Lib.current.stage);
@@ -126,9 +133,21 @@ class Model {
 		}, keys, [GameButtons.jump => Keyboard.SPACE]);
 		floorLabel = new TextField();
 		recordLabel = new TextField();
+		windLabel = new TextField();
 		gravity[vertical] = 100;
 		platform = new Platform(100);
 		platformPosition = 0.66;
+	}
+
+	function rndPos(a:Axis2D) {
+		var b = bounds;
+		return b.pos[a] + Math.random() * b.size[a];
+	}
+
+	function randomizeGate(gate:Gate) {
+		gate.x = rndPos(horizontal);
+		gate.y = rndPos(vertical);
+		gate.rotation = -180 + Math.random() * 360;
 	}
 
 	public function reset() {
@@ -145,13 +164,21 @@ class Model {
 		platform.x = bounds.size[horizontal] * 0.5;
 		platform.speed[horizontal] = 0;
 		platform.speed[vertical] = 0;
+		gravity[horizontal] = 0;
 		record = 0;
 		updateLabels();
+		randomizeGate(entrance);
+		randomizeGate(exit);
 	}
 
 	var record = 0;
 
 	public function updateLabels() {
+		if (floor[vertical] > 10)
+			gravity[horizontal] = if (Math.random() > 0.7) Math.random() * 30 - 15 else 0;
+		else
+			gravity[horizontal] = 0;
+		windLabel.text = "wind: " + Std.int(gravity[horizontal] * 100);
 		var v = floor[vertical];
 		floorLabel.text = "" + v;
 		if (v < record)
@@ -185,12 +212,14 @@ class GameBounds extends System {
 				while (pos[a] > r) {
 					pos[a] -= s;
 					model.floor[a]--;
-					dirty = true;
+					if (a == vertical)
+						dirty = true;
 				}
 				while (pos[a] < l) {
 					pos[a] += s;
 					model.floor[a]++;
-					dirty = true;
+					if (a == vertical)
+						dirty = true;
 				}
 			}
 		}
@@ -325,29 +354,31 @@ class PlatformDetector extends System {
 			return;
 		if (x > left && x < right)
 			straightBounce(ball);
-        else 
-            cornerHit(ball);
+		else
+			cornerHit(ball);
 	}
-    var cornerPos = new Vec2D(0,0);
-    var localPos = new Vec2D(0,0);
-    var localSpd = new Vec2D(0,0);
-    var normal = new Vec2D(0,0);
+
+	var cornerPos = new Vec2D(0, 0);
+	var localPos = new Vec2D(0, 0);
+	var localSpd = new Vec2D(0, 0);
+	var normal = new Vec2D(0, 0);
+
 	function cornerHit(ball:Ball) {
-        var pl = model.platform;
-        var ballSpd:Vec2D = cast ball.spd;
-        var platfSpd:Vec2D = cast pl.speed;
-        localSpd.copyFrom(ballSpd);
-        localSpd.remove(platfSpd);
-        localPos.x = ball.pos[horizontal] - pl.x;
-        localPos.y = ball.pos[vertical] - pl.y;
-        cornerPos.x = localPos.x > 0 ? pl.w/2 : -pl.w/2;
-        normal.copyFrom(cornerPos);
-        normal.remove(localPos);
-        normal.normalize(1);
-        localSpd.reflect(normal);
-        ballSpd.x = localSpd.x + platfSpd.x;
-        ballSpd.y = localSpd.y + platfSpd.y;
-    }
+		var pl = model.platform;
+		var ballSpd:Vec2D = cast ball.spd;
+		var platfSpd:Vec2D = cast pl.speed;
+		localSpd.copyFrom(ballSpd);
+		localSpd.remove(platfSpd);
+		localPos.x = ball.pos[horizontal] - pl.x;
+		localPos.y = ball.pos[vertical] - pl.y;
+		cornerPos.x = localPos.x > 0 ? pl.w / 2 : -pl.w / 2;
+		normal.copyFrom(cornerPos);
+		normal.remove(localPos);
+		normal.normalize(1);
+		localSpd.reflect(normal);
+		ballSpd.x = localSpd.x + platfSpd.x;
+		ballSpd.y = localSpd.y + platfSpd.y;
+	}
 
 	function straightBounce(ball:Ball) {
 		// ball.spd[vertical] *= -1;
@@ -411,5 +442,53 @@ class Platform extends Sprite {
 		// graphics.beginFill(0xff0000);
 		// graphics.drawRect(-w / 2, 0, w, 2);
 		// graphics.endFill();
+	}
+}
+
+class Portal extends System {
+	var point:Point = new Point();
+
+	override function update(dt:Float) {
+		for (ball in model.balls)
+			handleBall(ball);
+	}
+
+	public function handleBall(b:Ball) {
+		var entrance = model.entrance;
+		var exit = model.exit;
+		point.setTo(b.pos[horizontal], b.pos[vertical]);
+		var local = entrance.globalToLocal(point);
+		if (local.y < 0 || local.x < -entrance.w / 2 || local.x > entrance.w / 2)
+			return;
+		var newpos = exit.localToGlobal(local);
+
+		point.setTo(b.spd[horizontal] + entrance.x, b.spd[vertical] + entrance.y);
+		var newspd = exit.localToGlobal(entrance.globalToLocal(point));
+		newspd.x -= exit.x;
+		newspd.y -= exit.y;
+		trace(b.spd, point, newspd);
+
+		b.pos[horizontal] = (newpos.x);
+		b.pos[vertical] = (newpos.y);
+		b.spd[horizontal] = (newspd.x);
+		b.spd[vertical] = (newspd.y);
+	}
+}
+
+class Gate extends Sprite {
+	public var w:Float;
+
+	var h = 20;
+
+	public function new(w, c) {
+		super();
+		this.w = w;
+		w += 20;
+		graphics.beginFill(0);
+		graphics.drawRect(-w / 2, 0, w, h);
+		graphics.endFill();
+		graphics.beginFill(c);
+		graphics.drawRect(-w / 2, 0, w, 2);
+		graphics.endFill();
 	}
 }
