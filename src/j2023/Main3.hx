@@ -115,7 +115,7 @@ class Ball implements IBall {
 		view = new Sprite();
 		view.graphics.beginFill(color);
 		view.graphics.drawCircle(pos[Axis2D.horizontal], pos[Axis2D.vertical], r);
-        view.graphics.endFill();
+		view.graphics.endFill();
 	}
 }
 
@@ -127,7 +127,7 @@ class Model {
 
 	var _balls(default, null):Array<Ball> = [];
 
-	public var platformSpdMul = 1.;
+	public var platfState:PlatformViewState;
 	public var balls(default, null):Array<Ball> = [];
 	public var platform:Platform;
 	public var gravity:AVector2D<Float> = AVConstructor.create(0, 0);
@@ -182,7 +182,7 @@ class Model {
 			// ball.pos[vertical] = 700;
 			ball.spd[horizontal] = Math.random() * 20 - 10;
 			ball.spd[vertical] = 430;
-            ball.view.y = -100;
+			ball.view.y = -100;
 		}
 		floor[horizontal] = 0;
 		floor[vertical] = 0;
@@ -192,7 +192,8 @@ class Model {
 		platform.speed[vertical] = 0;
 		gravity[horizontal] = 0;
 		record = 0;
-		platformSpdMul = 1;
+		platfState = normal;
+		platform.changeState(platfState);
 		updateLabels();
 		randomizeGate(entrance);
 		randomizeGate(exit);
@@ -215,8 +216,12 @@ class Model {
 			moreBalls(2);
 		if (floor[vertical] > 30)
 			moreBalls(3);
-		if (floor[vertical] > 5)
-			platformSpdMul = 0.5 + Math.random();
+		var rnd = Math.random();
+		var old = platfState;
+		platfState = if (floor[vertical] < 5 || rnd < 0.33) normal else if (rnd < 0.666) slow else fast;
+		if (platfState != old)
+			platform.changeState(platfState);
+
 		windLabel.text = "wind: " + Std.int(gravity[horizontal] * 100);
 		var v = floor[vertical];
 		floorLabel.text = "" + v;
@@ -460,12 +465,23 @@ class BallRenderer extends System {
 
 class PlatformMotor extends System {
 	override function update(dt:Float) {
+		var platformSpdMul = switch model.platfState {
+			case normal: 1;
+			case slow: 0.6;
+			case fast: 1.6;
+		}
 		var p = model.platform;
 		var l = model.bounds.pos[horizontal] + p.w / 2;
 		var r = model.bounds.size[horizontal] - p.w / 2;
-		var o = model.input.getDirProjection(horizontal) * 230 * dt * model.platformSpdMul;
+		var o = model.input.getDirProjection(horizontal) * 230 * dt * platformSpdMul;
 		p.x = MathUtil.clamp(p.x + o, l, r);
 	}
+}
+
+@:enum abstract PlatformViewState(Int) {
+	var normal;
+	var slow;
+	var fast;
 }
 
 class Platform extends Sprite {
@@ -477,12 +493,25 @@ class Platform extends Sprite {
 	public function new(w) {
 		super();
 		this.w = w;
-		graphics.beginFill(0);
-		graphics.drawRect(-w / 2, -h / 2, w, h);
-		graphics.endFill();
-		// graphics.beginFill(0xff0000);
 		// graphics.drawRect(-w / 2, 0, w, 2);
 		// graphics.endFill();
+	}
+
+	public function changeState(s:PlatformViewState) {
+		// graphics.beginFill(0xff0000);
+        graphics.clear();
+		switch s {
+			case slow:
+				graphics.beginFill(0x952C02);
+				graphics.drawRect(-w / 2, -h / 2, w, h + 5);
+			case normal:
+				graphics.beginFill(0xFFB300);
+				graphics.drawRect(-w / 2, -h / 2, w, h - 5);
+			case fast:
+				graphics.beginFill(0xBCBEFF);
+				graphics.drawRect(-w / 2, -h / 2, w, h - 5);
+		}
+		graphics.endFill();
 	}
 }
 
